@@ -178,15 +178,13 @@
     <div class="container app-container">
         <div class="app-header">
             <h1><i class="fas fa-magic me-2"></i>Generador de Prompts Avanzado</h1>
-            <p class="mb-0">Crea prompts profesionales con parámetros técnicos optimizados para correr en LLM - IAs</p>
+            <p class="mb-0">Crea prompts profesionales con parámetros técnicos optimizados</p>
             
             <div class="model-selector">
                 <div class="model-btn active" data-model="chatgpt"><i class="fab fa-openai me-2"></i>ChatGPT</div>
                 <div class="model-btn" data-model="claude"><i class="fas fa-robot me-2"></i>Claude</div>
                 <div class="model-btn" data-model="gemini"><i class="fab fa-google me-2"></i>Gemini</div>
-                <div class="model-btn" data-model="perplexity"></i>Perplexity</div>
-		<div class="model-btn" data-model="Tados las IAs"></i>Todas las IAs</div>
-
+                <div class="model-btn" data-model="perplexity"><i class="fas fa-question-circle me-2"></i>Perplexity</div>
             </div>
         </div>
 
@@ -270,6 +268,38 @@
                     <div class="mb-3">
                         <label class="form-label">Formato de Salida <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Especifica cómo quieres que se presente la respuesta (ej. 'tabla', 'lista de viñetas', 'ensayo de 500 palabras')."></i></label>
                         <textarea class="form-control" id="formatInput" rows="2" placeholder="Especifica cómo quieres que se presente la respuesta..."></textarea>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h4><i class="fas fa-cogs me-2"></i>Parámetros Técnicos</h4>
+                    <div class="row">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="param-control">
+                                <label class="form-label">Temperatura <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Controla la creatividad (0 = determinista, 1 = muy creativo)"></i></label>
+                                <input type="range" class="form-range" id="temperatureSlider" min="0" max="1" step="0.1" value="0.7">
+                                <div class="param-help" id="temperatureValue">Valor: 0.7</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="param-control">
+                                <label class="form-label">Seed <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Semilla para reproducibilidad (dejar en blanco para aleatorio)"></i></label>
+                                <input type="number" class="form-control" id="seedInput" placeholder="42">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="param-control">
+                                <label class="form-label">Top P <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Diversidad de vocabulario (0.1 = conservador, 1 = diverso)"></i></label>
+                                <input type="range" class="form-range" id="topPSlider" min="0.1" max="1" step="0.1" value="0.9">
+                                <div class="param-help" id="topPValue">Valor: 0.9</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="param-control">
+                                <label class="form-label">Max Tokens <i class="fas fa-question-circle help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Longitud máxima de la respuesta"></i></label>
+                                <input type="number" class="form-control" id="maxTokensInput" value="500">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -403,8 +433,9 @@
         const topPSlider = document.getElementById('topPSlider');
         const topPValue = document.getElementById('topPValue');
         const synthesisFocusInput = document.getElementById('synthesisFocus');
-        
-        document.addEventListener('DOMContentLoaded', async function() {
+
+        // Función para inicializar y cargar la app.
+        async function initializeApp() {
             // Inicializar tooltips de Bootstrap
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -475,8 +506,10 @@
             document.getElementById('copyPromptBtn').addEventListener('click', copyPrompt);
             document.getElementById('savePromptBtn').addEventListener('click', savePrompt);
             document.getElementById('presetSelect').addEventListener('change', applyPreset);
-        });
-        
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
         // Funciones
         function addChapter() {
             const chapterList = document.getElementById('chapterList');
