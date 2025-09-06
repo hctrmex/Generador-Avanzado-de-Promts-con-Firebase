@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Prompts Avanzado</title>
+    <title>Generador de Prompts Avanzado HS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -177,14 +177,16 @@
 <body>
     <div class="container app-container">
         <div class="app-header">
-            <h1><i class="fas fa-magic me-2"></i>Generador de Prompts Avanzado</h1>
+            <h1><i class="fas fa-magic me-2"></i>Generador de Prompts Avanzado para LLMs</h1>
             <p class="mb-0">Crea prompts profesionales con parámetros técnicos optimizados</p>
             
             <div class="model-selector">
                 <div class="model-btn active" data-model="chatgpt"><i class="fab fa-openai me-2"></i>ChatGPT</div>
                 <div class="model-btn" data-model="claude"><i class="fas fa-robot me-2"></i>Claude</div>
                 <div class="model-btn" data-model="gemini"><i class="fab fa-google me-2"></i>Gemini</div>
-                <div class="model-btn" data-model="perplexity"><i class="fas fa-question-circle me-2"></i>Perplexity</div>
+                <div class="model-btn" data-model="perplexity"></i>Perplexity</div>
+                <div class="model-btn" data-model="Todas las IAs"></i>LLMs</div>
+
             </div>
         </div>
 
@@ -407,22 +409,12 @@
     <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
     
     <script>
-        // Variables globales de la app, proporcionadas por el entorno de Canvas.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        let savedConfigs = [];
+        // Variables globales de la app
+        let savedConfigs = JSON.parse(localStorage.getItem('savedConfigs')) || [];
         let currentChapters = [];
-        let db = null;
-        let auth = null;
-        let userId = null;
-
+        
         // Obtener elementos del DOM
         const promptNameInput = document.getElementById('promptName');
         const toneSelect = document.getElementById('toneSelect');
@@ -435,53 +427,13 @@
         const synthesisFocusInput = document.getElementById('synthesisFocus');
 
         // Función para inicializar y cargar la app.
-        async function initializeApp() {
+        function initializeApp() {
             // Inicializar tooltips de Bootstrap
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
             
-            // Inicializar Firebase
-            try {
-                const app = firebase.initializeApp(firebaseConfig);
-                db = firebase.getFirestore(app);
-                auth = firebase.getAuth(app);
-            } catch (error) {
-                console.error("Error al inicializar Firebase:", error);
-            }
-
-            // Autenticar al usuario
-            try {
-                if (initialAuthToken) {
-                    await firebase.signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await firebase.signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Error en la autenticación:", error);
-            }
-            
-            // Esperar a que la autenticación esté lista para obtener el userId
-            firebase.onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    userId = user.uid;
-                    console.log(`Usuario autenticado con ID: ${userId}`);
-
-                    // Configuración de Firestore
-                    const promptsCollection = firebase.collection(db, `/artifacts/${appId}/users/${userId}/prompts`);
-
-                    // Escuchar cambios en las configuraciones de prompts en tiempo real
-                    firebase.onSnapshot(promptsCollection, (snapshot) => {
-                        savedConfigs = [];
-                        snapshot.forEach((doc) => {
-                            savedConfigs.push({ id: doc.id, ...doc.data() });
-                        });
-                        loadSavedConfigs();
-                    });
-                }
-            });
-
             // Event listeners
             toneSelect.addEventListener('change', function() {
                 if (this.value === 'other') {
@@ -506,6 +458,8 @@
             document.getElementById('copyPromptBtn').addEventListener('click', copyPrompt);
             document.getElementById('savePromptBtn').addEventListener('click', savePrompt);
             document.getElementById('presetSelect').addEventListener('change', applyPreset);
+
+            loadSavedConfigs();
         }
 
         document.addEventListener('DOMContentLoaded', initializeApp);
@@ -668,12 +622,13 @@ PARÁMETROS TÉCNICOS:
             }
         };
         
-        async function saveConfiguration() {
+        function saveConfiguration() {
             const configName = promptNameInput.value || 'Configuración sin nombre';
             const configDescription = document.getElementById('promptDescription').value;
             const currentTone = toneSelect.value === 'other' ? otherToneInput.value : toneSelect.value;
         
             const config = {
+                id: Date.now(),
                 name: configName,
                 description: configDescription,
                 role: document.getElementById('roleInput').value,
@@ -688,24 +643,23 @@ PARÁMETROS TÉCNICOS:
                 maxTokens: document.getElementById('maxTokensInput').value,
                 globalTitle: document.getElementById('globalAnalysisTitle').value,
                 synthesisFocus: synthesisFocusInput.value,
-                chapters: JSON.stringify(currentChapters), // Serializa el array a JSON string
+                chapters: currentChapters,
                 timestamp: new Date().toISOString()
             };
             
-            try {
-                // Se usa el nombre del prompt como ID del documento para que sea más fácil de ubicar
-                await firebase.setDoc(firebase.doc(firebase.collection(db, `/artifacts/${appId}/users/${userId}/prompts`), configName), config);
-                showToast('Configuración guardada correctamente', 'success');
-            } catch (error) {
-                console.error("Error al guardar la configuración:", error);
-                showToast('Error al guardar la configuración', 'danger');
-            }
+            let storedConfigs = JSON.parse(localStorage.getItem('savedConfigs')) || [];
+            storedConfigs.push(config);
+            localStorage.setItem('savedConfigs', JSON.stringify(storedConfigs));
+            
+            loadSavedConfigs();
+            showToast('Configuración guardada correctamente', 'success');
         }
         
         function loadSavedConfigs() {
             const configList = document.getElementById('configList');
             if (!configList) return;
             
+            savedConfigs = JSON.parse(localStorage.getItem('savedConfigs')) || [];
             configList.innerHTML = '';
             
             if (savedConfigs.length === 0) {
@@ -733,7 +687,7 @@ PARÁMETROS TÉCNICOS:
         }
         
         window.loadConfiguration = function(configId) {
-            const config = savedConfigs.find(c => c.id === configId);
+            const config = savedConfigs.find(c => c.id == configId);
             if (!config) return;
             
             promptNameInput.value = config.name;
@@ -761,7 +715,7 @@ PARÁMETROS TÉCNICOS:
             temperatureValue.textContent = 'Valor: ' + (config.temperature || 0.7);
             topPValue.textContent = 'Valor: ' + (config.topP || 0.9);
             
-            currentChapters = JSON.parse(config.chapters) || []; // Parsea el JSON string de vuelta a un array
+            currentChapters = config.chapters || [];
             renderChapters();
             
             showToast('Configuración cargada correctamente', 'success');
@@ -807,20 +761,17 @@ PARÁMETROS TÉCNICOS:
             });
         }
         
-        async function deleteConfiguration(configId) {
+        window.deleteConfiguration = function(configId) {
             const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-            document.getElementById('configNameToDelete').textContent = savedConfigs.find(c => c.id === configId)?.name || '';
+            document.getElementById('configNameToDelete').textContent = savedConfigs.find(c => c.id == configId)?.name || '';
             modal.show();
 
             const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-            const confirmHandler = async function() {
-                try {
-                    await firebase.deleteDoc(firebase.doc(firebase.collection(db, `/artifacts/${appId}/users/${userId}/prompts`), configId));
-                    showToast('Configuración eliminada', 'info');
-                } catch (error) {
-                    console.error("Error al eliminar la configuración:", error);
-                    showToast('Error al eliminar la configuración', 'danger');
-                }
+            const confirmHandler = function() {
+                savedConfigs = savedConfigs.filter(c => c.id != configId);
+                localStorage.setItem('savedConfigs', JSON.stringify(savedConfigs));
+                loadSavedConfigs();
+                showToast('Configuración eliminada', 'info');
                 modal.hide();
                 confirmDeleteBtn.removeEventListener('click', confirmHandler);
             };
